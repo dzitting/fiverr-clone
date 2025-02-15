@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import FiverrLogo from "../FiverrLogo";
-import { useStateProvider } from "@/context/StateContext";
+import Link from "next/link";
 import { IoSearchOutline } from "react-icons/io5";
 import { useRouter } from "next/router";
+import Image from "next/image";
 import { useCookies } from "react-cookie";
-import { GET_USER_INFO, HOST } from "@/utils/constants";
 import axios from "axios";
+import { GET_USER_INFO, HOST } from "@/utils/constants";
+import ContextMenu from "../ContextMenu";
+import { useStateProvider } from "@/context/StateContext";
 import { reducerCases } from "@/context/constants";
 
 function Navbar() {
-    const router = useRouter();
     const [cookies] = useCookies();
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [isFixed, setIsFixed] = useState(false);
+    const router = useRouter();
+    const [navFixed, setNavFixed] = useState(false);
     const [searchData, setSearchData] = useState("");
-    const [{ showLoginModal, showSignupModal, userInfo, isSeller }, dispatch] =
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [{ showLoginModal, showSignupModal, isSeller, userInfo }, dispatch] =
         useStateProvider();
-    const handleLogin = (showSignupModal) => {
+
+    const handleLogin = () => {
         if (showSignupModal) {
             dispatch({
                 type: reducerCases.TOGGLE_SIGNUP_MODAL,
@@ -30,19 +33,18 @@ function Navbar() {
         });
     };
 
-    const handleSignup = () => { };
-
-    useEffect(() => {
-        if (router.pathname === "/") {
-            const positionNavbar = () => {
-                window.pageYOffset > 0 ? setIsFixed(true) : setIsFixed(false);
-            };
-            window.addEventListener("scroll", positionNavbar);
-            return () => window.removeEventListener("scroll", positionNavbar);
-        } else {
-            setIsFixed(true);
+    const handleSignup = () => {
+        if (showLoginModal) {
+            dispatch({
+                type: reducerCases.TOGGLE_LOGIN_MODAL,
+                showLoginModal: false,
+            });
         }
-    }, [router.pathname]);
+        dispatch({
+            type: reducerCases.TOGGLE_SIGNUP_MODAL,
+            showSignupModal: true,
+        });
+    };
 
     const links = [
         { linkName: "Fiverr Business", handler: "#", type: "link" },
@@ -54,13 +56,50 @@ function Navbar() {
     ];
 
     useEffect(() => {
+        if (router.pathname === "/") {
+            const positionNavbar = () => {
+                window.pageYOffset > 0 ? setNavFixed(true) : setNavFixed(false);
+            };
+            window.addEventListener("scroll", positionNavbar);
+            return () => window.removeEventListener("scroll", positionNavbar);
+        } else {
+            setNavFixed(true);
+        }
+    }, [router.pathname]);
+
+    const handleOrdersNavigate = () => {
+        if (isSeller) router.push("/seller/orders");
+        router.push("/buyer/orders");
+    };
+
+    const handleModeSwitch = () => {
+        if (isSeller) {
+            dispatch({ type: reducerCases.SWITCH_MODE });
+            router.push("/buyer/orders");
+        } else {
+            dispatch({ type: reducerCases.SWITCH_MODE });
+            router.push("/seller");
+        }
+    };
+
+    useEffect(() => {
         if (cookies.jwt && !userInfo) {
             const getUserInfo = async () => {
                 try {
                     const {
                         data: { user },
-                    } = await axios.post(GET_USER_INFO, {}, { withCredentials: true });
-                    let projectedUserInfo = { ...userInfo };
+                    } = await axios.post(
+                        GET_USER_INFO,
+                        {},
+                        {
+                            withCredentials: true,
+                            headers: {
+                                Authorization: `Bearer ${cookies.jwt}`,
+                            },
+                        }
+                    );
+
+                    let projectedUserInfo = { ...user };
                     if (user.image) {
                         projectedUserInfo = {
                             ...projectedUserInfo,
@@ -72,64 +111,74 @@ function Navbar() {
                         type: reducerCases.SET_USER,
                         userInfo: projectedUserInfo,
                     });
-
                     setIsLoaded(true);
-                    console.log(user);
-                    if (user.isProfileInfoSet === false) {
+                    console.log({ user });
+                    if (user.isProfileSet === false) {
                         router.push("/profile");
-                    } else {
-                        setIsLoaded(true);
                     }
                 } catch (err) {
                     console.log(err);
                 }
             };
+
             getUserInfo();
         } else {
             setIsLoaded(true);
         }
-    }, [cookies, userInfo]);
+    }, [cookies, userInfo, dispatch]);
+    const [isContextMenuVisible, setIsContextMenuVisible] = useState(false);
+    useEffect(() => {
+        const clickListener = (e) => {
+            e.stopPropagation();
 
-    const handleOrdersNavigate = () => {
-        if (isSeller) {
-            router.push("/seller/orders");
-            router.push("/buyer/orders");
+            if (isContextMenuVisible) setIsContextMenuVisible(false);
+        };
+        if (isContextMenuVisible) {
+            window.addEventListener("click", clickListener);
         }
-    };
+        return () => {
+            window.removeEventListener("click", clickListener);
+        };
+    }, [isContextMenuVisible]);
+    const ContextMenuData = [
+        {
+            name: "Profile",
+            callback: (e) => {
+                e.stopPropagation();
 
-    const handleModeSwitch = () => {
-        if (isSeller) {
-            dispatch({
-                type: reducerCases.SWITCH_MODE,
-            });
-            router.push("/buyer/orders");
-        } else {
-            dispatch({
-                type: reducerCases.SWITCH_MODE,
-            });
-            router.push("/seller");
-        }
-    };
+                setIsContextMenuVisible(false);
+                router.push("/profile");
+            },
+        },
+        {
+            name: "Logout",
+            callback: (e) => {
+                e.stopPropagation();
 
+                setIsContextMenuVisible(false);
+                router.push("/logout");
+            },
+        },
+    ];
 
     return (
         <>
             {isLoaded && (
                 <nav
-                    className={`w-full px-24 flex justify-between items-center py-6  top-0 z-30 transition-all duration-300 ${isFixed || userInfo
-                        ? "fixed bg-white border-b border-gray-200"
-                        : "absolute bg-transparent border-transparent"
+                    className={`w-full px-24 flex justify-between items-center py-6  top-0 z-30 transition-all duration-300 ${navFixed || userInfo
+                            ? "fixed bg-white border-b border-gray-200"
+                            : "absolute bg-transparent border-transparent"
                         }`}
                 >
                     <div>
                         <Link href="/">
                             <FiverrLogo
-                                fillColor={!isFixed && !userInfo ? "#ffffff" : "#404145"}
+                                fillColor={!navFixed && !userInfo ? "#ffffff" : "#404145"}
                             />
                         </Link>
                     </div>
                     <div
-                        className={`flex ${isFixed || userInfo ? "opacity-100" : "opacity-0"
+                        className={`flex ${navFixed || userInfo ? "opacity-100" : "opacity-0"
                             }`}
                     >
                         <input
@@ -155,7 +204,7 @@ function Navbar() {
                                 return (
                                     <li
                                         key={linkName}
-                                        className={`${isFixed ? "text-black" : "text-white"
+                                        className={`${navFixed ? "text-black" : "text-white"
                                             } font-medium`}
                                     >
                                         {type === "link" && <Link href={handler}>{linkName}</Link>}
@@ -165,9 +214,9 @@ function Navbar() {
                                         {type === "button2" && (
                                             <button
                                                 onClick={handler}
-                                                className={`border   text-md font-semibold py-1 px-3 rounded-sm ${isFixed
-                                                    ? "border-[#1DBF73] text-[#1DBF73]"
-                                                    : "border-white text-white"
+                                                className={`border   text-md font-semibold py-1 px-3 rounded-sm ${navFixed
+                                                        ? "border-[#1DBF73] text-[#1DBF73]"
+                                                        : "border-white text-white"
                                                     } hover:bg-[#1DBF73] hover:text-white hover:border-[#1DBF73] transition-all duration-500`}
                                             >
                                                 {linkName}
@@ -181,46 +230,63 @@ function Navbar() {
                         <ul className="flex gap-10 items-center">
                             {isSeller && (
                                 <li
-                                    className="cursor-pointer font-medium"
+                                    className="cursor-pointer text-[#1DBF73] font-medium"
                                     onClick={() => router.push("/seller/gigs/create")}
                                 >
-                                    Create A Gig
+                                    Create Gig
                                 </li>
                             )}
-                            <li className="cursor-pointer font-medium" onClick={handleOrdersNavigate}>
+                            <li
+                                className="cursor-pointer text-[#1DBF73] font-medium"
+                                onClick={handleOrdersNavigate}
+                            >
                                 Orders
                             </li>
-                            <li className="cursor-pointer font-medium" onClick={handleModeSwitch}>
-                                Switch to {isSeller ? "Buyer" : "Seller"}
-                            </li>
-                            {/* The following code is for the profile icon */}
-                            <li className="cursor-pointer"
+
+                            {isSeller ? (
+                                <li
+                                    className="cursor-pointer font-medium"
+                                    onClick={handleModeSwitch}
+                                >
+                                    Switch To Buyer
+                                </li>
+                            ) : (
+                                <li
+                                    className="cursor-pointer font-medium"
+                                    onClick={handleModeSwitch}
+                                >
+                                    Switch To Seller
+                                </li>
+                            )}
+                            <li
+                                className="cursor-pointer"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    // setIsContextMenuVisible(true);
+                                    setIsContextMenuVisible(true);
                                 }}
-                                title="Profile">
-
+                                title="Profile"
+                            >
                                 {userInfo?.imageName ? (
                                     <Image
-                                        src={userInfo?.imageName}
-                                        alt="profile"
-                                        height={40}
+                                        src={userInfo.imageName}
+                                        alt="Profile"
                                         width={40}
+                                        height={40}
                                         className="rounded-full"
                                     />
                                 ) : (
                                     <div className="bg-purple-500 h-10 w-10 flex items-center justify-center rounded-full relative">
-                                        <span className="text-x
-                                    l text-white">
-                                            {userInfo.email[0].toUpperCase()}
+                                        <span className="text-xl text-white">
+                                            {userInfo &&
+                                                userInfo?.email &&
+                                                userInfo?.email.split("")[0].toUpperCase()}
                                         </span>
                                     </div>
                                 )}
                             </li>
-
                         </ul>
                     )}
+                    {isContextMenuVisible && <ContextMenu data={ContextMenuData} />}
                 </nav>
             )}
         </>

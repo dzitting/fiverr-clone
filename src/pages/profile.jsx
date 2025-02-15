@@ -1,23 +1,105 @@
-import { useStateProvider } from '@/context/StateContext';
-import { useRouter } from 'next/router';
-import React, { useState } from 'react';
+import { useStateProvider } from "../context/StateContext";
+import { reducerCases } from "../context/constants";
+import {
+    HOST,
+    IMAGES_URL,
+    SET_USER_IMAGE,
+    SET_USER_INFO,
+} from "../utils/constants";
+import axios from "axios";
+import Image from "next/image";
+import { useRouter } from "next/router";
+import React, { useEffect, useState } from "react";
 
-
-function profile() {
+function Profile() {
     const router = useRouter();
-    const [isLoaded, setIsLoaded] = useState(false);
     const [{ userInfo }, dispatch] = useStateProvider();
+    const [isLoaded, setIsLoaded] = useState(false);
     const [imageHover, setImageHover] = useState(false);
     const [image, setImage] = useState(undefined);
-    const [errorMsg, setErrorMsg] = useState(undefined);
+    const [errorMessage, setErrorMessage] = useState("");
     const [data, setData] = useState({
         userName: "",
         fullName: "",
         description: "",
     });
 
+    useEffect(() => {
+        const handleData = { ...data };
+        if (userInfo) {
+            if (userInfo?.username) handleData.userName = userInfo?.username;
+            if (userInfo?.description) handleData.description = userInfo?.description;
+            if (userInfo?.fullName) handleData.fullName = userInfo?.fullName;
+            console.log({ userInfo });
+
+            if (userInfo?.imageName) {
+                const fileName = image;
+                fetch(userInfo.imageName).then(async (response) => {
+                    const contentType = response.headers.get("content-type");
+                    const blob = await response.blob();
+                    // @ts-ignore
+                    const files = new File([blob], fileName, { contentType });
+                    // @ts-ignore
+                    setImage(files);
+                });
+            }
+
+            setData(handleData);
+            setIsLoaded(true);
+        }
+    }, [userInfo]);
+
+    const handleFile = (e) => {
+        let file = e.target.files;
+        const fileType = file[0]["type"];
+        const validImageTypes = ["image/gif", "image/jpeg", "image/png"];
+        if (validImageTypes.includes(fileType)) {
+            setImage(file[0]);
+        }
+    };
     const handleChange = (e) => {
         setData({ ...data, [e.target.name]: e.target.value });
+    };
+
+    const setProfile = async () => {
+        try {
+            const response = await axios.post(
+                SET_USER_INFO,
+                { ...data },
+                { withCredentials: true }
+            );
+            if (response.data.userNameError) {
+                setErrorMessage("Enter a Unique Username");
+            } else {
+                let imageName = "";
+                if (image) {
+                    const formData = new FormData();
+                    formData.append("images", image);
+                    const {
+                        data: { img },
+                    } = await axios.post(SET_USER_IMAGE, formData, {
+                        withCredentials: true,
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
+                    });
+                    imageName = img;
+                }
+
+                dispatch({
+                    type: reducerCases.SET_USER,
+                    userInfo: {
+                        ...userInfo,
+                        ...data,
+                        image: imageName.length ? HOST + "/" + imageName : false,
+                    },
+                });
+
+                router.push("/");
+            }
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const inputClassName =
@@ -144,7 +226,7 @@ function profile() {
                 </div>
             )}
         </>
-    )
+    );
 }
 
-export default profile
+export default Profile;
