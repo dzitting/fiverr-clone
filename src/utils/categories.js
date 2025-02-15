@@ -9,5 +9,5 @@ export const categories = [
     { name: "Business", logo: "/service-7.svg" },
     { name: "Lifestyle", logo: "/service-8.svg" },
     { name: "Photography", logo: "/service-9.svg" },
-    { name: "Sitemap", logo: "/service-10.svg" },
+    // { name: "Sitemap", logo: "/service-10.svg" },
 ];
