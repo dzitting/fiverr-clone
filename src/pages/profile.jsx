@@ -212,7 +212,7 @@ function Profile() {
                                 value={data.description}
                                 onChange={handleChange}
                                 className={inputClassName}
-                                placeholder="description"
+                                placeholder="DEscription"
                             ></textarea>
                         </div>
                         <button

@@ -14,7 +14,7 @@ import { reducerCases } from "@/context/constants";
 function Navbar() {
     const [cookies] = useCookies();
     const router = useRouter();
-    const [navFixed, setNavFixed] = useState(false);
+    const [isFixed, setIsFixed] = useState(false);
     const [searchData, setSearchData] = useState("");
     const [isLoaded, setIsLoaded] = useState(false);
     const [{ showLoginModal, showSignupModal, isSeller, userInfo }, dispatch] =
@@ -58,12 +58,12 @@ function Navbar() {
     useEffect(() => {
         if (router.pathname === "/") {
             const positionNavbar = () => {
-                window.pageYOffset > 0 ? setNavFixed(true) : setNavFixed(false);
+                window.pageYOffset > 0 ? setIsFixed(true) : setIsFixed(false);
             };
             window.addEventListener("scroll", positionNavbar);
             return () => window.removeEventListener("scroll", positionNavbar);
         } else {
-            setNavFixed(true);
+            setIsFixed(true);
         }
     }, [router.pathname]);
 
@@ -165,7 +165,7 @@ function Navbar() {
         <>
             {isLoaded && (
                 <nav
-                    className={`w-full px-24 flex justify-between items-center py-6  top-0 z-30 transition-all duration-300 ${navFixed || userInfo
+                    className={`w-full px-24 flex justify-between items-center py-6  top-0 z-30 transition-all duration-300 ${isFixed || userInfo
                             ? "fixed bg-white border-b border-gray-200"
                             : "absolute bg-transparent border-transparent"
                         }`}
@@ -173,12 +173,12 @@ function Navbar() {
                     <div>
                         <Link href="/">
                             <FiverrLogo
-                                fillColor={!navFixed && !userInfo ? "#ffffff" : "#404145"}
+                                fillColor={!isFixed && !userInfo ? "#ffffff" : "#404145"}
                             />
                         </Link>
                     </div>
                     <div
-                        className={`flex ${navFixed || userInfo ? "opacity-100" : "opacity-0"
+                        className={`flex ${isFixed || userInfo ? "opacity-100" : "opacity-0"
                             }`}
                     >
                         <input
@@ -204,7 +204,7 @@ function Navbar() {
                                 return (
                                     <li
                                         key={linkName}
-                                        className={`${navFixed ? "text-black" : "text-white"
+                                        className={`${isFixed ? "text-black" : "text-white"
                                             } font-medium`}
                                     >
                                         {type === "link" && <Link href={handler}>{linkName}</Link>}
@@ -214,7 +214,7 @@ function Navbar() {
                                         {type === "button2" && (
                                             <button
                                                 onClick={handler}
-                                                className={`border   text-md font-semibold py-1 px-3 rounded-sm ${navFixed
+                                                className={`border   text-md font-semibold py-1 px-3 rounded-sm ${isFixed
                                                         ? "border-[#1DBF73] text-[#1DBF73]"
                                                         : "border-white text-white"
                                                     } hover:bg-[#1DBF73] hover:text-white hover:border-[#1DBF73] transition-all duration-500`}
