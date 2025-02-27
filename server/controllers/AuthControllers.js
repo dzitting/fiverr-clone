@@ -88,3 +88,68 @@ export const getUserInfo = async (req, res, next) => {
         return res.status(500).send("Internal Server Error");
     }
 }
+export const setUserInfo = async (req, res, next) => {
+    console.log(req.userId);
+    try {
+        if(req?.userId) {
+            const {userName, fullName, description} = req.body;
+            if(userName && fullName && description) {
+                const prisma = new PrismaClient();
+                const userNameValid = await prisma.user.findUnique({
+                    where:{username: userName}
+                });
+                if(userNameValid) {
+                    return res.status(200).json({userNameError: true});
+                }
+
+                await prisma.user.update({
+                    where: {
+                        id:req.userId
+                    }, data:{
+                        username: userName,
+                        fullName: fullName,
+                        description: description,
+                        isProfileInfoSet: true,
+                    },
+                });
+                }
+                return res.status(200).json("Profiled is successfully updated");
+        }
+        else {
+            return res.status(400).send("Username, Full Name, and Description Required");
+        }
+    } catch(err) {
+        if(err instanceof Prisma.PrismaClientKnownRequestError) {
+            if(err.code === "P2002") {
+                return res.status(400).json({userNameError: true});
+            }
+        } else {
+            return res.status(500).send("Internal Server Error");
+        }
+        throw err;
+    }
+}
+
+export const setUserImage = async (req, res, next) => {
+    try {
+      if (req.file) {
+        if (req?.userId) {
+          const date = Date.now();
+          let fileName = "uploads/profiles/" + date + req.file.originalname;
+          renameSync(req.file.path, fileName);
+          const prisma = new PrismaClient();
+  
+          await prisma.user.update({
+            where: { id: req.userId },
+            data: { profileImage: fileName },
+          });
+          return res.status(200).json({ img: fileName });
+        }
+        return res.status(400).send("Cookie Error.");
+      }
+      return res.status(400).send("Image not inclued.");
+    } catch (err) {
+      console.log(err);
+      res.status(500).send("Internal Server Occured");
+    }
+  };

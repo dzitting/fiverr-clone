@@ -18,6 +18,8 @@ app.use(cors({
     exposedHeaders: ['set-cookie']
 }));
 
+app.use("/uploads/profiles", express.static("uploads/profiles"));
+
 // Enable parsing of cookies
 app.use(cookieParser());
 
